@@ -1,0 +1,11 @@
+# Kernel module build artifacts
+*.ko
+*.o
+*.mod
+*.mod.c
+*.order
+*.symvers
+.*.cmd
+
+# Device tree binary
+*.dtbo

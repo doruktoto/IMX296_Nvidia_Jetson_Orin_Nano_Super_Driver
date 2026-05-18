@@ -1,0 +1,250 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay — Sony IMX296 on CAM0 (Jetson Orin Nano Super, P3768)
+ *
+ * Hardware assumptions:
+ *   - Camera on CAM0 CSI connector
+ *   - port-index <0> = serial_a (try this first for CAM0 on P3768)
+ *   - port-index <1> = serial_b (use this if serial_a produces no frames)
+ *   - I2C address 0x1a on cam_i2c (i2c@3180000) — no hardware I2C mux on P3768
+ *   - 2-lane MIPI CSI-2 DPHY
+ *   - 37.125 MHz MCLK from Orin extperiph1 (bpmp clock ID 36)
+ *
+ * To change to 1 lane: set bus-width = <1> in all three endpoint nodes below.
+ *
+ * Clock IDs (from dt-bindings/clock/tegra234-clock.h):
+ *   TEGRA234_CLK_EXTPERIPH1  = 36
+ *   TEGRA234_CLK_PLLP_OUT0   = 102
+ *
+ * Build:
+ *   dtc -@ -I dts -O dtb -o imx296_cam0_overlay.dtbo imx296_cam0_overlay.dts
+ *   (the -@ flag is required — it generates __symbols__ for overlay application)
+ *
+ * Apply (one-shot until next reflash):
+ *   sudo fdtoverlay -i /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb \
+ *                   -o /tmp/combined.dtb imx296_cam0_overlay.dtbo
+ *   sudo cp /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb \
+ *            /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+ *   sudo cp /tmp/combined.dtb \
+ *            /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb
+ *   sudo reboot
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	overlay-name = "Camera IMX296-A (CAM0)";
+	jetson-header-name = "Jetson 24pin CSI Connector";
+	compatible = "nvidia,p3768-0000+p3767-0005-super",
+	             "nvidia,p3768-0000+p3767-0005",
+	             "nvidia,p3768-0000+p3767-0004-super",
+	             "nvidia,p3768-0000+p3767-0004",
+	             "nvidia,p3768-0000+p3767-0003-super",
+	             "nvidia,p3768-0000+p3767-0003",
+	             "nvidia,p3768-0000+p3767-0001-super",
+	             "nvidia,p3768-0000+p3767-0001",
+	             "nvidia,p3768-0000+p3767-0000-super",
+	             "nvidia,p3768-0000+p3767-0000";
+
+	/* -----------------------------------------------------------------------
+	 * Fragment 0: augment the existing tegra-capture-vi node (symbol
+	 * capture_vi = "/tegra-capture-vi" in base DTB) with one VI input port.
+	 */
+	fragment@0 {
+		target = <&capture_vi>;
+
+		__overlay__ {
+			num-channels = <1>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					imx296_vi_in0: endpoint {
+						port-index = <0>;
+						bus-width = <2>;
+						remote-endpoint = <&imx296_csi_out0>;
+					};
+				};
+			};
+		};
+	};
+
+	/* -----------------------------------------------------------------------
+	 * Fragment 1: augment the existing nvcsi node (symbol
+	 * nvcsi = "/bus@0/host1x@13e00000/nvcsi@15a00000" in base DTB) with one
+	 * CSI channel wiring sensor MIPI lanes to the VI port above.
+	 */
+	fragment@1 {
+		target = <&nvcsi>;
+
+		__overlay__ {
+			num-channels = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			channel@0 {
+				reg = <0>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					/* Input from IMX296 MIPI pads */
+					port@0 {
+						reg = <0>;
+						imx296_csi_in0: endpoint@0 {
+							port-index = <0>;
+							bus-width = <2>;
+							remote-endpoint = <&imx296_out0>;
+						};
+					};
+
+					/* Output to tegra-capture-vi port@0 */
+					port@1 {
+						reg = <1>;
+						imx296_csi_out0: endpoint@1 {
+							remote-endpoint = <&imx296_vi_in0>;
+						};
+					};
+				};
+			};
+		};
+	};
+
+	/* -----------------------------------------------------------------------
+	 * Fragment 2: add IMX296 sensor to cam_i2c (symbol
+	 * cam_i2c = "/bus@0/i2c@3180000" in base DTB).
+	 * The P3768 carrier has no hardware I2C mux on the camera bus.
+	 */
+	fragment@2 {
+		target = <&cam_i2c>;
+
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			imx296_a: imx296_a@1a {
+				compatible = "sony,imx296";
+				reg = <0x1a>;
+				devnode = "video0";
+
+				/*
+				 * 37.125 MHz MCLK via bpmp extperiph1.
+				 * TEGRA234_CLK_EXTPERIPH1 = 36
+				 * TEGRA234_CLK_PLLP_OUT0  = 102
+				 */
+				clocks = <&bpmp 36>;
+				clock-names = "extclk";
+				assigned-clocks = <&bpmp 36>;
+				assigned-clock-parents = <&bpmp 102>;
+				assigned-clock-rates = <54000000>;
+
+				/*
+				 * Uncomment if a hardware reset GPIO is wired from
+				 * the carrier to the sensor XCLR pin:
+				 *   reset-gpios = <&gpio_aon 19 GPIO_ACTIVE_HIGH>;
+				 */
+
+				/*
+				 * NVIDIA RTCPU sensor mode — needed for NVCSI D-PHY
+				 * timing configuration.  Values assume:
+				 *   37.125 MHz MCLK, 2-lane DPHY, RAW10, ~60 fps
+				 *   MIPI link clock = 297 MHz (594 Mbps/lane)
+				 */
+				mode0 {
+					mclk_khz = "37125";
+					num_lanes = "2";
+					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
+					discontinuous_clk = "no";
+					dpcm_enable = "false";
+					cil_settletime = "0";
+
+					active_w = "1456";
+					active_h = "1088";
+					mode_type = "bayer";
+					pixel_phase = "rggb";
+					csi_pixel_bit_depth = "10";
+					readout_orientation = "0";
+					line_length = "1604";
+					inherent_gain = "1";
+					mclk_multiplier = "16";
+					pix_clk_hz = "118800000";
+
+					gain_factor = "16";
+					framerate_factor = "1000000";
+					exposure_factor = "1000000";
+					min_gain_val = "16";
+					max_gain_val = "3840";
+					step_gain_val = "1";
+					default_gain = "16";
+					min_hdr_ratio = "1";
+					max_hdr_ratio = "1";
+					min_framerate = "1000000";
+					max_framerate = "60000000";
+					step_framerate = "1";
+					default_framerate = "60000000";
+					min_exp_time = "34";
+					max_exp_time = "18220";
+					step_exp_time = "1";
+					default_exp_time = "16667";
+					embedded_metadata_height = "0";
+				};
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						imx296_out0: endpoint {
+							port-index = <0>;
+							bus-width = <2>;
+							data-lanes = <1 2>;
+							remote-endpoint = <&imx296_csi_in0>;
+						};
+					};
+				};
+			};
+		};
+	};
+
+	/* -----------------------------------------------------------------------
+	 * Fragment 3: create tegra-camera-platform at root (not present in base
+	 * DTB — safe to create as a new node).
+	 */
+	fragment@3 {
+		target-path = "/";
+
+		__overlay__ {
+			tegra-camera-platform {
+				compatible = "nvidia,tegra-camera-platform";
+				num_csi_lanes = <2>;
+				max_lane_speed = <1500000>;
+				min_bits_per_pixel = <10>;
+				vi_peak_byte_per_pixel = <2>;
+				vi_bw_margin_pct = <25>;
+				max_pixel_rate = <750000>;
+				isp_peak_byte_per_pixel = <5>;
+				isp_bw_margin_pct = <25>;
+
+				modules {
+					module0 {
+						badge = "imx296_cam0";
+						position = "front";
+						orientation = "1";
+
+						drivernode0 {
+							pcl_id = "v4l2_sensor";
+							sysfs-device-tree = "/sys/firmware/devicetree/base/bus@0/i2c@3180000/imx296_a@1a";
+						};
+					};
+				};
+			};
+		};
+	};
+};
