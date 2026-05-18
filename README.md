@@ -60,6 +60,33 @@ Verify:
 ```bash
 ls -lh /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
 ```
+Add backup boot option to extlinux
+```
+sudo nano /boot/extlinux/extlinux.conf
+
+```
+
+```
+TIMEOUT 50
+DEFAULT primary
+
+MENU TITLE L4T boot options
+
+LABEL primary
+  MENU LABEL primary kernel
+  LINUX /boot/Image
+  INITRD /boot/initrd
+  APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
+  FDT /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb
+
+LABEL backup
+  MENU LABEL backup - original DTB
+  LINUX /boot/Image
+  INITRD /boot/initrd
+  APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
+  FDT /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+```
+
 
 ### 5. Compile the device tree overlay
 
