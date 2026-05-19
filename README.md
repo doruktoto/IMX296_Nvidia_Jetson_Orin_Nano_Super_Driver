@@ -203,3 +203,29 @@ IMX296 sensor
 ```
 
 Format: RAW10, 1456×1088, pixel format `RG10` (RGGB Bayer).
+
+## TODO — current build fixes required
+
+- [x] **Driver — remove SENSOR_INFO probe block** (`imx296.c`)  
+  The `imx296_power_on` / `regmap_write(IMX296_STANDBY, 0x00)` block in `imx296_probe`
+  causes a kernel oops during boot by briefly taking the sensor out of standby while
+  NVCSI is initialising. Remove it entirely — it was debug-only.
+
+- [ ] **Driver — accept 51 MHz clock** (`imx296.c`)  
+  bpmp delivers 51000000 Hz (408 MHz / 8), not 54 MHz. Update the clock check:  
+  `if (sensor->clk_freq != 54000000 && sensor->clk_freq != 51000000)`
+
+- [ ] **DTS — set clock rate to 51 MHz** (`imx296_cam0_overlay.dts`)  
+  Change `assigned-clock-rates = <54000000>` to `assigned-clock-rates = <51000000>`
+
+- [ ] **DTS — add extlinux backup boot entry** (`/boot/extlinux/extlinux.conf`)  
+  Add a `LABEL backup` entry pointing to `.dtb.bak` with `TIMEOUT 50`.
+  Prevents needing reflash if a bad DTB is applied. Do this once after first backup.
+
+- [ ] **Verify INCKSEL values work at 51 MHz**  
+  Current table uses 54 MHz INCKSEL values `{0xb0, 0x0f, 0xb0, 0x0c}` with
+  CTRL418C = 0xa8. These were confirmed on RPi at exactly 54 MHz. At 51 MHz (5.5% low)
+  the sensor PLL may not lock. If STREAMON still returns EIO after the above fixes,
+  the INCKSEL values need tuning for 51 MHz — no confirmed values exist yet for this
+  frequency. Options: find a clock source that delivers exactly 54 MHz, or
+  empirically tune INCKSEL for 51 MHz.Sonnet 4.6Adaptive

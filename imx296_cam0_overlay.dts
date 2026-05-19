@@ -141,7 +141,7 @@
 				clock-names = "extclk";
 				assigned-clocks = <&bpmp 36>;
 				assigned-clock-parents = <&bpmp 102>;
-				assigned-clock-rates = <54000000>;
+				assigned-clock-rates = <51000000>;
 
 				/*
 				 * Uncomment if a hardware reset GPIO is wired from
