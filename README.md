@@ -176,8 +176,14 @@ sudo depmod -a
 sudo reboot
 ```
 
-The DTB does not need to be reapplied unless `imx296_cam0_overlay.dts` changed.
-
+The DTB does not need to be reapplied unless `imx296_cam0_overlay.dts or imx296_cam1_overlay.dts` changed.
+```
+dtc -@ -I dts -O dtb -o imx296_cam1_overlay.dtbo imx296_cam1_overlay.dts
+sudo cp /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+sudo fdtoverlay -i /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak -o /tmp/combined.dtb imx296_cam1_overlay.dtbo
+sudo cp /tmp/combined.dtb /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb
+sudo reboot
+```
 ---
 
 ## Key register notes
