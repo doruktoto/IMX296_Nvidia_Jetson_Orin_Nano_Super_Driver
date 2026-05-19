@@ -45,6 +45,7 @@ make
 ### 3. Install the module
 
 ```bash
+sudo mkdir -p /lib/modules/$(uname -r)/extra/ 
 sudo cp imx296.ko /lib/modules/$(uname -r)/extra/
 sudo depmod -a
 ```
@@ -52,13 +53,13 @@ sudo depmod -a
 ### 4. Back up the active DTB — do this before any overlay work
 
 ```bash
-sudo cp /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb \
-        /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+sudo cp /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb \
+        /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
 ```
 
 Verify:
 ```bash
-ls -lh /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+ls -lh /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
 ```
 Add backup boot option to extlinux
 ```
@@ -77,14 +78,14 @@ LABEL primary
   LINUX /boot/Image
   INITRD /boot/initrd
   APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
-  FDT /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb
+  FDT /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.dtb
 
 LABEL backup
   MENU LABEL backup - original DTB
   LINUX /boot/Image
   INITRD /boot/initrd
   APPEND ${cbootargs} quiet root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4
-  FDT /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
+  FDT /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak
 ```
 
 
@@ -101,7 +102,7 @@ Warnings about `unit_address_vs_reg` and `graph_child_address` are harmless.
 Always apply against `.bak`, never against the already-patched active DTB.
 
 ```bash
-sudo fdtoverlay -i /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak \
+sudo fdtoverlay -i /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak \
                 -o /tmp/combined.dtb \
                 imx296_cam0_overlay.dtbo
 ```
@@ -119,7 +120,7 @@ Should return one match for the camera node.
 
 ```bash
 sudo cp /tmp/combined.dtb \
-        /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb
+        /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb
 ```
 
 ### 9. Reboot
@@ -159,8 +160,8 @@ tegra-camrtc-capture-vi tegra-capture-vi: subdev imx296 2-001a bound
 If the DTB change causes a boot failure, restore the backup from another terminal or SSH session:
 
 ```bash
-sudo cp /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak \
-        /boot/tegra234-p3768-0000+p3767-0005-nv-super.dtb
+sudo cp /boot/tkernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.bak \
+        /boot/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb.dtb
 sudo reboot
 ```
 
