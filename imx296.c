@@ -729,20 +729,6 @@ static int imx296_probe(struct i2c_client *client,
 			PTR_ERR(sensor->regmap));
 		return PTR_ERR(sensor->regmap);
 	}
-
-	ret = imx296_power_on(sensor);
-	if (ret == 0) {
-		unsigned int lo, hi;
-		regmap_write(sensor->regmap, IMX296_STANDBY, 0x00);
-		usleep_range(5000, 10000);
-		regmap_read(sensor->regmap, 0x3148, &lo);
-		regmap_read(sensor->regmap, 0x3149, &hi);
-		dev_info(dev, "SENSOR_INFO: 0x%04x\n", (hi << 8) | lo);
-		regmap_write(sensor->regmap, IMX296_STANDBY, 0x01);
-		imx296_power_off(sensor);
-	}
-
-
 	/* Controls */
 	v4l2_ctrl_handler_init(&sensor->ctrls, 2);
 
