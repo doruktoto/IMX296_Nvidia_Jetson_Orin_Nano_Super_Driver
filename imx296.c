@@ -703,7 +703,7 @@ static int imx296_probe(struct i2c_client *client,
 	}
 
 	sensor->clk_freq = clk_get_rate(sensor->clk);
-	if (sensor->clk_freq != 54000000) {
+	if (sensor->clk_freq != 54000000 && sensor->clk_freq != 51000000) {
 		dev_warn(dev, "unsupported clock %u Hz, using 54 MHz tables\n",
 		 	sensor->clk_freq);
 		sensor->clk_freq = 54000000;

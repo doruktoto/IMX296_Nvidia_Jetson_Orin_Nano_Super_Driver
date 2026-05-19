@@ -212,11 +212,11 @@ Format: RAW10, 1456×1088, pixel format `RG10` (RGGB Bayer).
   causes a kernel oops during boot by briefly taking the sensor out of standby while
   NVCSI is initialising. Remove it entirely — it was debug-only.
 
-- [ ] **Driver — accept 51 MHz clock** (`imx296.c`)  
+- [x] **Driver — accept 51 MHz clock** (`imx296.c`)  
   bpmp delivers 51000000 Hz (408 MHz / 8), not 54 MHz. Update the clock check:  
   `if (sensor->clk_freq != 54000000 && sensor->clk_freq != 51000000)`
 
-- [ ] **DTS — set clock rate to 51 MHz** (`imx296_cam0_overlay.dts`)  
+- [x] **DTS — set clock rate to 51 MHz** (`imx296_cam0_overlay.dts`)  
   Change `assigned-clock-rates = <54000000>` to `assigned-clock-rates = <51000000>`
 
 - [ ] **DTS — add extlinux backup boot entry** (`/boot/extlinux/extlinux.conf`)  

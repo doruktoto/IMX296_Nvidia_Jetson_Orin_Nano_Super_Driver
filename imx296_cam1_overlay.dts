@@ -100,10 +100,10 @@
 				clock-names = "extclk";
 				assigned-clocks = <&bpmp 36>;
 				assigned-clock-parents = <&bpmp 102>;
-				assigned-clock-rates = <54000000>;
+				assigned-clock-rates = <51000000>;
 
 				mode0 {
-					mclk_khz = "54000";
+					mclk_khz = "51000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_c";
 					phy_mode = "DPHY";
